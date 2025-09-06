@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hummingbot Journey Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #48bb78;
+            --warning: #f6ad55;
+            --danger: #fc8181;
+            --bg-dark: #1a202c;
+            --bg-light: #edf2f7;
+            --text-dark: #e2e8f0;
+            --text-light: #2d3748;
+            --card-dark: #2d3748;
+            --card-light: #ffffff;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .header-gradient {
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--primary));
+            background-size: 200% 200%;
+            animation: gradient-animation 10s ease infinite;
+        }
+
+        @keyframes gradient-animation {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .phase-card-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            padding: 0 1.5rem;
+        }
+
+        .phase-card.expanded .phase-card-content {
+            max-height: 5000px;
+            /* Large enough for content */
+            padding: 1.5rem 1.5rem;
+        }
+
+        .task-checkbox:checked+.task-label .checkmark-circle {
+            background-color: var(--success);
+            border-color: var(--success);
+        }
+
+        .task-checkbox:checked+.task-label .checkmark-icon {
+            opacity: 1;
+        }
+
+        .task-checkbox:checked+.task-label span {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+
+        .progress-bar-inner {
+            transition: width 0.5s ease-in-out;
+        }
+
+        .achievement-badge.unlocked {
+            filter: none;
+            opacity: 1;
+        }
+
+        .achievement-badge {
+            filter: grayscale(100%);
+            opacity: 0.5;
+            transition: filter 0.3s, opacity 0.3s;
+        }
+
+        .floating-btn {
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        }
+
+        .code-block {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            position: relative;
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background-color: #4a5568;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .code-block:hover .copy-btn {
+            opacity: 1;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+
+    <!-- Header -->
+    <header class="header-gradient text-white p-6 text-center shadow-lg">
+        <h1 class="text-3xl md:text-4xl font-bold">Hummingbot Journey Tracker</h1>
+        <p class="mt-2 text-lg opacity-90">From Zero to Profitable Algorithmic Trading</p>
+    </header>
+
+    <main class="container mx-auto p-4 md:p-8">
+
+        <!-- Progress Dashboard -->
+        <section id="progress-dashboard" class="mb-8 p-6 rounded-xl shadow-md bg-white dark:bg-gray-800">
+            <h2 class="text-2xl font-bold mb-4">Your Progress</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h3 class="font-semibold mb-2 text-gray-600 dark:text-gray-400">Overall Completion</h3>
+                    <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-6">
+                        <div id="overall-progress-bar"
+                            class="bg-gradient-to-r from-purple-500 to-indigo-500 h-6 rounded-full progress-bar-inner text-center text-white font-bold text-sm flex items-center justify-center"
+                            style="width: 0%;">0%</div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-gray-600 dark:text-gray-400">Time Tracking</h3>
+                    <p class="text-lg"><span id="days-elapsed"
+                            class="font-bold text-2xl text-purple-600 dark:text-purple-400">0</span> Days Elapsed</p>
+                </div>
+                <div>
+                    <h3 class="font-semibold mb-2 text-gray-600 dark:text-gray-400">Activity Streak</h3>
+                    <p class="text-lg"><span id="streak-counter"
+                            class="font-bold text-2xl text-purple-600 dark:text-purple-400">0</span> Day Streak 🔥</p>
+                </div>
+            </div>
+            <div class="mt-6">
+                <h3 class="font-semibold mb-3 text-gray-600 dark:text-gray-400">Achievements Unlocked</h3>
+                <div id="achievements-container" class="flex flex-wrap gap-4">
+                    <!-- Badges will be injected here -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Mode Switcher -->
+        <div class="flex justify-center items-center mb-8 gap-4">
+            <span class="font-medium">Choose your path:</span>
+            <div class="relative inline-block w-40 flex items-center justify-center">
+                <label class="switch relative inline-block w-16 h-8">
+                    <input type="checkbox" id="mode-switcher" class="opacity-0 w-0 h-0">
+                    <span
+                        class="slider absolute cursor-pointer top-0 left-0 right-0 bottom-0 bg-gray-300 dark:bg-gray-700 transition rounded-full before:absolute before:h-6 before:w-6 before:left-1 before:bottom-1 before:bg-white before:transition before:rounded-full"></span>
+                </label>
+            </div>
+            <span id="current-path-label" class="font-bold text-purple-600 dark:text-purple-400 w-48 text-left">Quick
+                Win (2 Weeks)</span>
+        </div>
+
+        <!-- Learning Path Content -->
+        <div id="learning-path-container">
+            <!-- Phases will be dynamically injected here -->
+        </div>
+
+        <!-- Resource Hub -->
+        <section id="resource-hub" class="mt-8 p-6 rounded-xl shadow-md bg-white dark:bg-gray-800">
+            <h2 class="text-2xl font-bold mb-4">Resource Hub</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <a href="https://docs.hummingbot.org" target="_blank"
+                    class="block p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900 transition">
+                    <h3 class="font-bold">Hummingbot Docs</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">The official documentation.</p>
+                </a>
+                <a href="https://testnet.binance.vision" target="_blank"
+                    class="block p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900 transition">
+                    <h3 class="font-bold">Binance Testnet</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Practice without real funds.</p>
+                </a>
+                <a href="https://discord.gg/hummingbot" target="_blank"
+                    class="block p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900 transition">
+                    <h3 class="font-bold">Hummingbot Discord</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Join the community.</p>
+                </a>
+                <a href="https://github.com/hummingbot/mcp" target="_blank"
+                    class="block p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900 transition">
+                    <h3 class="font-bold">MCP GitHub</h3>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">AI integration project.</p>
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Quick Actions -->
+    <div class="fixed bottom-5 right-5 flex flex-col items-center gap-3">
+        <button id="dark-mode-toggle"
+            class="floating-btn bg-gray-800 dark:bg-white text-white dark:text-gray-800 w-12 h-12 rounded-full flex items-center justify-center text-2xl">
+            <!-- Moon/Sun Icon -->
+            <svg id="theme-icon-light" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+            <svg id="theme-icon-dark" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z">
+                </path>
+            </svg>
+        </button>
+        <button id="export-btn"
+            class="floating-btn bg-blue-500 text-white w-12 h-12 rounded-full flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+            </svg>
+        </button>
+        <button id="reset-btn"
+            class="floating-btn bg-red-500 text-white w-12 h-12 rounded-full flex items-center justify-center">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h5M20 20v-5h-5M4 4l16 16"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Modal for confirmation -->
+    <div id="confirmation-modal" class="modal-overlay hidden">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-11/12 md:w-1/3">
+            <h3 id="modal-title" class="text-xl font-bold mb-4">Are you sure?</h3>
+            <p id="modal-message" class="text-gray-600 dark:text-gray-400 mb-6">This action cannot be undone.</p>
+            <div class="flex justify-end gap-4">
+                <button id="modal-cancel-btn"
+                    class="px-4 py-2 bg-gray-300 dark:bg-gray-600 rounded-lg hover:bg-gray-400 transition">Cancel</button>
+                <button id="modal-confirm-btn"
+                    class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- DATA STRUCTURES ---
+            const achievements = {
+                installer: { icon: '💻', title: 'Installer', description: 'Complete setup' },
+                paperTrader: { icon: '📜', title: 'Paper Trader', description: 'First paper trade' },
+                liveTrader: { icon: '💸', title: 'Live Trader', description: 'First real trade' },
+                profitable: { icon: '📈', title: 'Profitable', description: 'First profitable week' },
+                advanced: { icon: '🧠', title: 'Advanced', description: 'Complete advanced strategies' },
+                mcpMaster: { icon: '🤖', title: 'MCP Master', description: 'Setup AI integration' }
+            };
+
+            const quickWinPath = [
+                // Phases and tasks for the 2-week path
+                {
+                    id: 'qw-phase-1',
+                    title: 'Day 1: Environment Setup',
+                    tasks: [
+                        { id: 'qw-1-1', title: 'Install Docker Desktop', type: 'setup', difficulty: 'beginner', achievement: 'installer' },
+                        { id: 'qw-1-2', title: 'Pull Hummingbot image', type: 'setup', difficulty: 'beginner', details: { code: { snippet: 'docker pull hummingbot/hummingbot:latest', language: 'bash' } } },
+                        { id: 'qw-1-3', title: 'Create working directories & launch container', type: 'setup', difficulty: 'beginner', details: { code: { snippet: 'mkdir ~/hummingbot_files && cd ~/hummingbot_files\ndocker run -it \\\n  --name hummingbot-instance \\\n  --mount "type=bind,source=$(pwd),destination=/conf/" \\\n  --mount "type=bind,source=$(pwd)/logs,destination=/logs/" \\\n  hummingbot/hummingbot:latest', language: 'bash' } } },
+                        { id: 'qw-1-4', title: 'Create Binance Testnet account & API keys', type: 'setup', difficulty: 'beginner', details: { links: [{ title: 'Binance Testnet', url: 'https://testnet.binance.vision' }] } },
+                        { id: 'qw-1-5', title: 'Connect Hummingbot to testnet', type: 'setup', difficulty: 'intermediate', details: { notes: ["Inside hummingbot, run `connect binance_paper_trade` and enter your keys."] } },
+                    ]
+                },
+                {
+                    id: 'qw-phase-2',
+                    title: 'Days 2-5: Paper Trading with 3 Strategies',
+                    tasks: [
+                        { id: 'qw-2-1', title: 'Run Pure Market Making strategy', type: 'trading', difficulty: 'beginner', achievement: 'paperTrader', details: { notes: ["Use conservative settings: 0.3% spread, 0.001 BTC order amount."] } },
+                        { id: 'qw-2-2', title: 'Run Cross-Exchange Market Making', type: 'trading', difficulty: 'intermediate', details: { notes: ["Connect a second exchange (e.g., KuCoin testnet). Set min profitability to 0.3%."] } },
+                        { id: 'qw-2-3', title: 'Run Arbitrage strategy', type: 'trading', difficulty: 'intermediate', details: { notes: ["Use a volatile pair like ETH-USDT. Set min profitability to 0.35%."] } }
+                    ]
+                },
+                {
+                    id: 'qw-phase-3',
+                    title: 'Days 6-8: Performance Analysis & Optimization',
+                    tasks: [
+                        { id: 'qw-3-1', title: 'Export and analyze trade history', type: 'analysis', difficulty: 'intermediate' },
+                        { id: 'qw-3-2', title: 'Configure kill switch for safety', type: 'optimization', difficulty: 'intermediate', details: { configExample: { kill_switch_enabled: true, kill_switch_rate: -0.02 } } },
+                        { id: 'qw-3-3', title: 'Set up Telegram notifications', type: 'optimization', difficulty: 'beginner' },
+                    ]
+                },
+                {
+                    id: 'qw-phase-4',
+                    title: 'Days 9-14: Live Trading & Scaling',
+                    tasks: [
+                        { id: 'qw-4-1', title: 'Complete pre-flight checklist', type: 'setup', difficulty: 'intermediate' },
+                        { id: 'qw-4-2', title: 'Go live with $50-100 starting capital', type: 'trading', difficulty: 'advanced', achievement: 'liveTrader' },
+                        { id: 'qw-4-3', title: 'Monitor performance and scale up if profitable', type: 'trading', difficulty: 'advanced', achievement: 'profitable' },
+                    ]
+                }
+            ];
+
+            const comprehensivePath = [
+                // Phases and tasks for the 8-week path
+                {
+                    id: 'cp-phase-1',
+                    title: 'Weeks 1-2: Trading Fundamentals & Prerequisites',
+                    tasks: [
+                        { id: 'cp-1-1', title: 'Learn Market Basics (Order books, Spreads)', type: 'setup', difficulty: 'beginner' },
+                        { id: 'cp-1-2', title: 'Understand Market Making & Arbitrage Concepts', type: 'setup', difficulty: 'beginner' },
+                        { id: 'cp-1-3', title: 'Master Command Line Basics', type: 'setup', difficulty: 'beginner' },
+                        { id: 'cp-1-4', title: 'Set up 2FA and API keys securely', type: 'setup', difficulty: 'beginner' }
+                    ]
+                },
+                {
+                    id: 'cp-phase-2',
+                    title: 'Week 3: Hummingbot Installation & Paper Trading Setup',
+                    tasks: [
+                        { id: 'cp-2-1', title: 'Install Docker and run Hummingbot', type: 'setup', difficulty: 'beginner', achievement: 'installer', details: { code: { snippet: 'docker pull hummingbot/hummingbot:latest', language: 'bash' } } },
+                        { id: 'cp-2-2', title: 'Connect to Binance Testnet', type: 'setup', difficulty: 'beginner' },
+                        { id: 'cp-2-3', title: 'Run a simple pure market making strategy for 24 hours', type: 'trading', difficulty: 'intermediate', achievement: 'paperTrader' }
+                    ]
+                },
+                {
+                    id: 'cp-phase-3',
+                    title: 'Weeks 4-5: Strategy Deep Dive',
+                    tasks: [
+                        { id: 'cp-3-1', title: 'Master Pure Market Making parameters', type: 'trading', difficulty: 'intermediate' },
+                        { id: 'cp-3-2', title: 'Test Cross-Exchange Market Making', type: 'trading', difficulty: 'intermediate' },
+                        { id: 'cp-3-3', title: 'Test Arbitrage Strategy', type: 'trading', difficulty: 'intermediate' }
+                    ]
+                },
+                {
+                    id: 'cp-phase-4',
+                    title: 'Weeks 6-7: Going Live & Risk Management',
+                    tasks: [
+                        { id: 'cp-4-1', title: 'Go live with small capital ($50-100)', type: 'trading', difficulty: 'advanced', achievement: 'liveTrader' },
+                        { id: 'cp-4-2', title: 'Implement Kill Switch and monitor closely', type: 'optimization', difficulty: 'advanced' },
+                        { id: 'cp-4-3', title: 'Track P&L and analyze performance metrics', type: 'analysis', difficulty: 'advanced', achievement: 'profitable' }
+                    ]
+                },
+                {
+                    id: 'cp-phase-5',
+                    title: 'Week 8+: Optimization, Scaling & MCP Integration',
+                    tasks: [
+                        { id: 'cp-5-1', title: 'Move to a VPS for 24/7 uptime', type: 'optimization', difficulty: 'advanced' },
+                        { id: 'cp-5-2', title: 'Install MCP server and connect to Hummingbot', type: 'setup', difficulty: 'advanced', achievement: 'mcpMaster' },
+                        { id: 'cp-5-3', title: 'Implement a basic AI strategy controller (e.g., dynamic spread)', type: 'optimization', difficulty: 'advanced', achievement: 'advanced' }
+                    ]
+                }
+            ];
+
+            const learningPaths = {
+                'quick-win': { data: quickWinPath, name: 'Quick Win (2 Weeks)' },
+                'comprehensive': { data: comprehensivePath, name: 'Comprehensive (8 Weeks)' }
+            };
+
+            // --- STATE MANAGEMENT ---
+            let state = {
+                currentPath: 'quick-win',
+                completedTasks: [],
+                startDate: null,
+                lastActivityDate: null,
+                streak: 0,
+                achievements: []
+            };
+
+            const saveState = () => {
+                localStorage.setItem('hummingbotTrackerState', JSON.stringify(state));
+            };
+
+            const loadState = () => {
+                const savedState = localStorage.getItem('hummingbotTrackerState');
+                if (savedState) {
+                    state = JSON.parse(savedState);
+                }
+                // Set start date on first task completion
+                if (!state.startDate && state.completedTasks.length > 0) {
+                    state.startDate = new Date().toISOString();
+                } else if (!state.startDate) {
+                    state.startDate = new Date().toISOString(); // Start counting from first visit
+                }
+            };
+
+            // --- UI RENDERING ---
+            const renderPath = () => {
+                const container = document.getElementById('learning-path-container');
+                container.innerHTML = '';
+                const pathData = learningPaths[state.currentPath].data;
+                document.getElementById('current-path-label').textContent = learningPaths[state.currentPath].name;
+
+                pathData.forEach(phase => {
+                    const phaseCard = document.createElement('div');
+                    phaseCard.className = 'phase-card mb-4 rounded-xl shadow-md bg-white dark:bg-gray-800 overflow-hidden';
+                    phaseCard.dataset.phaseId = phase.id;
+
+                    let tasksHtml = '';
+                    phase.tasks.forEach(task => {
+                        const isCompleted = state.completedTasks.includes(task.id);
+                        let detailsHtml = '';
+                        if (task.details) {
+                            if (task.details.notes) {
+                                detailsHtml += `<ul class="list-disc list-inside text-sm text-gray-500 dark:text-gray-400 mt-2">${task.details.notes.map(note => `<li>${note}</li>`).join('')}</ul>`;
+                            }
+                            if (task.details.code) {
+                                detailsHtml += `<div class="code-block rounded-lg mt-2 p-3 text-sm relative">
+                                    <button class="copy-btn">Copy</button>
+                                    <pre><code class="language-${task.details.code.language}">${task.details.code.snippet}</code></pre>
+                                </div>`;
+                            }
+                            if (task.details.links) {
+                                detailsHtml += `<div class="mt-2">${task.details.links.map(link => `<a href="${link.url}" target="_blank" class="text-purple-600 dark:text-purple-400 hover:underline text-sm">${link.title}</a>`).join(', ')}</div>`;
+                            }
+                        }
+
+                        tasksHtml += `
+                            <div class="task py-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                                <input type="checkbox" id="${task.id}" data-task-id="${task.id}" ${isCompleted ? 'checked' : ''} class="task-checkbox hidden">
+                                <label for="${task.id}" class="task-label flex items-center cursor-pointer">
+                                    <span class="checkmark-circle w-6 h-6 mr-4 border-2 border-gray-300 dark:border-gray-600 rounded-full flex items-center justify-center transition">
+                                        <svg class="checkmark-icon w-4 h-4 text-white opacity-0 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    </span>
+                                    <span>${task.title}</span>
+                                    <span class="ml-auto text-xs px-2 py-1 rounded-full ${task.difficulty === 'beginner' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' :
+                                task.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' :
+                                    'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                            }">${task.difficulty}</span>
+                                </label>
+                                ${detailsHtml}
+                            </div>
+                        `;
+                    });
+
+                    const phaseProgress = calculatePhaseProgress(phase.id);
+                    phaseCard.innerHTML = `
+                        <div class="phase-card-header p-4 cursor-pointer flex justify-between items-center bg-gray-50 dark:bg-gray-700/50">
+                            <h3 class="text-xl font-bold">${phase.title}</h3>
+                            <div class="flex items-center gap-4">
+                               <span class="text-sm font-semibold text-gray-600 dark:text-gray-400">${phaseProgress}%</span>
+                               <svg class="w-6 h-6 transition-transform transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        <div class="phase-card-content">
+                           ${tasksHtml}
+                        </div>
+                    `;
+                    container.appendChild(phaseCard);
+                });
+
+                // Add event listeners after rendering
+                addEventListeners();
+                updateDashboard();
+            };
+
+            const updateDashboard = () => {
+                const pathData = learningPaths[state.currentPath].data;
+                const totalTasks = pathData.reduce((sum, phase) => sum + phase.tasks.length, 0);
+                const completedTasksCount = state.completedTasks.filter(taskId => pathData.some(p => p.tasks.some(t => t.id === taskId))).length;
+
+                const progress = totalTasks > 0 ? Math.round((completedTasksCount / totalTasks) * 100) : 0;
+
+                const progressBar = document.getElementById('overall-progress-bar');
+                progressBar.style.width = `${progress}%`;
+                progressBar.textContent = `${progress}%`;
+
+                const startDate = new Date(state.startDate);
+                const today = new Date();
+                const daysElapsed = Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+                document.getElementById('days-elapsed').textContent = daysElapsed;
+
+                document.getElementById('streak-counter').textContent = state.streak;
+
+                renderAchievements();
+            };
+
+            const renderAchievements = () => {
+                const container = document.getElementById('achievements-container');
+                container.innerHTML = '';
+                for (const key in achievements) {
+                    const achievement = achievements[key];
+                    const isUnlocked = state.achievements.includes(key);
+                    const badge = document.createElement('div');
+                    badge.className = `achievement-badge p-2 rounded-lg flex items-center gap-2 ${isUnlocked ? 'unlocked bg-green-100 dark:bg-green-900' : 'bg-gray-100 dark:bg-gray-700'}`;
+                    badge.innerHTML = `
+                        <span class="text-2xl">${achievement.icon}</span>
+                        <div>
+                            <p class="font-bold text-sm">${achievement.title}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">${achievement.description}</p>
+                        </div>
+                    `;
+                    container.appendChild(badge);
+                }
+            };
+
+            // --- LOGIC & CALCULATIONS ---
+            const calculatePhaseProgress = (phaseId) => {
+                const phase = learningPaths[state.currentPath].data.find(p => p.id === phaseId);
+                if (!phase) return 0;
+                const totalTasks = phase.tasks.length;
+                const completedTasks = phase.tasks.filter(task => state.completedTasks.includes(task.id)).length;
+                return totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            };
+
+            const checkAchievements = (taskId) => {
+                const allTasks = [...quickWinPath.flatMap(p => p.tasks), ...comprehensivePath.flatMap(p => p.tasks)];
+                const task = allTasks.find(t => t.id === taskId);
+                if (task && task.achievement && !state.achievements.includes(task.achievement)) {
+                    state.achievements.push(task.achievement);
+                    // Maybe show a notification here later
+                }
+            };
+
+            const updateStreak = () => {
+                const today = new Date().toISOString().split('T')[0];
+                if (!state.lastActivityDate) {
+                    state.streak = 1;
+                } else {
+                    const lastDate = new Date(state.lastActivityDate);
+                    const todayDate = new Date(today);
+                    const diffTime = todayDate - lastDate;
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    if (diffDays === 1) {
+                        state.streak += 1;
+                    } else if (diffDays > 1) {
+                        state.streak = 1;
+                    }
+                }
+                state.lastActivityDate = today;
+            };
+
+            // --- EVENT HANDLING ---
+            const addEventListeners = () => {
+                document.querySelectorAll('.phase-card-header').forEach(header => {
+                    header.addEventListener('click', () => {
+                        header.parentElement.classList.toggle('expanded');
+                        header.querySelector('svg').classList.toggle('rotate-180');
+                    });
+                });
+
+                document.querySelectorAll('.task-checkbox').forEach(checkbox => {
+                    checkbox.addEventListener('change', (e) => {
+                        const taskId = e.target.dataset.taskId;
+                        if (e.target.checked) {
+                            if (!state.completedTasks.includes(taskId)) {
+                                state.completedTasks.push(taskId);
+                                checkAchievements(taskId);
+                            }
+                        } else {
+                            state.completedTasks = state.completedTasks.filter(id => id !== taskId);
+                        }
+                        updateStreak();
+                        saveState();
+                        updateDashboard();
+                        // Re-render the specific phase to update its progress percentage
+                        const phaseCard = e.target.closest('.phase-card');
+                        const phaseId = phaseCard.dataset.phaseId;
+                        const progress = calculatePhaseProgress(phaseId);
+                        phaseCard.querySelector('.phase-card-header span').textContent = `${progress}%`;
+                    });
+                });
+
+                document.querySelectorAll('.copy-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const code = e.target.nextElementSibling.querySelector('code').innerText;
+
+                        const textarea = document.createElement('textarea');
+                        textarea.value = code;
+                        document.body.appendChild(textarea);
+                        textarea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textarea);
+
+                        e.target.textContent = 'Copied!';
+                        setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
+                    });
+                });
+            };
+
+            document.getElementById('mode-switcher').addEventListener('change', (e) => {
+                state.currentPath = e.target.checked ? 'comprehensive' : 'quick-win';
+                saveState();
+                renderPath();
+            });
+
+            document.getElementById('export-btn').addEventListener('click', () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "hummingbot_progress.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            });
+
+            const showModal = (title, message, onConfirm) => {
+                const modal = document.getElementById('confirmation-modal');
+                document.getElementById('modal-title').textContent = title;
+                document.getElementById('modal-message').textContent = message;
+                modal.classList.remove('hidden');
+
+                const confirmBtn = document.getElementById('modal-confirm-btn');
+                const cancelBtn = document.getElementById('modal-cancel-btn');
+
+                const confirmHandler = () => {
+                    onConfirm();
+                    hideModal();
+                };
+
+                const cancelHandler = () => {
+                    hideModal();
+                };
+
+                const hideModal = () => {
+                    modal.classList.add('hidden');
+                    confirmBtn.removeEventListener('click', confirmHandler);
+                    cancelBtn.removeEventListener('click', cancelHandler);
+                };
+
+                confirmBtn.addEventListener('click', confirmHandler);
+                cancelBtn.addEventListener('click', cancelHandler);
+            };
+
+            document.getElementById('reset-btn').addEventListener('click', () => {
+                showModal('Reset Progress?', 'Are you sure you want to reset all your progress? This action cannot be undone.', () => {
+                    localStorage.removeItem('hummingbotTrackerState');
+                    // Reset state object to its initial values
+                    state = {
+                        currentPath: 'quick-win',
+                        completedTasks: [],
+                        startDate: new Date().toISOString(),
+                        lastActivityDate: null,
+                        streak: 0,
+                        achievements: []
+                    };
+                    document.getElementById('mode-switcher').checked = false;
+                    renderPath();
+                });
+            });
+
+            // --- THEME TOGGLE ---
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const themeIconLight = document.getElementById('theme-icon-light');
+            const themeIconDark = document.getElementById('theme-icon-dark');
+
+            const applyTheme = (theme) => {
+                if (theme === 'dark') {
+                    document.documentElement.classList.add('dark');
+                    themeIconLight.classList.add('hidden');
+                    themeIconDark.classList.remove('hidden');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    themeIconLight.classList.remove('hidden');
+                    themeIconDark.classList.add('hidden');
+                }
+            };
+
+            darkModeToggle.addEventListener('click', () => {
+                const isDark = document.documentElement.classList.contains('dark');
+                localStorage.setItem('theme', isDark ? 'light' : 'dark');
+                applyTheme(isDark ? 'light' : 'dark');
+            });
+
+
+            // --- INITIALIZATION ---
+            loadState();
+            document.getElementById('mode-switcher').checked = state.currentPath === 'comprehensive';
+            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            applyTheme(savedTheme);
+            renderPath();
+        });
+    </script>
+</body>
+
+</html>
